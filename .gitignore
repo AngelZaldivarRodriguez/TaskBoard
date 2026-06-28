@@ -1,0 +1,13 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/.vs/
+
+# Node
+frontend/**/node_modules/
+frontend/**/.env
+frontend/**/dist/
+
+# Secrets (nunca subir esto a git)
+backend/**/appsettings.Development.json
