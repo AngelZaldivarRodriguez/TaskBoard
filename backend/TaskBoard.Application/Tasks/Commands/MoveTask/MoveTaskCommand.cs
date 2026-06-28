@@ -20,6 +20,11 @@ public class MoveTaskCommandHandler(IAppDbContext db, IBoardNotifier notifier)
 
         var projectId = task.Column.ProjectId;
         var oldColumnId = task.ColumnId;
+        var oldColumnName = task.Column.Name;
+
+        var targetColumn = await db.Columns
+            .FirstOrDefaultAsync(c => c.Id == request.TargetColumnId, cancellationToken)
+            ?? throw new NotFoundException(nameof(BoardColumn), request.TargetColumnId);
 
         // Re-ordenar tareas en la columna origen (cerrar el hueco)
         var sourceTasks = await db.Tasks
@@ -51,8 +56,8 @@ public class MoveTaskCommandHandler(IAppDbContext db, IBoardNotifier notifier)
             TaskId = task.Id,
             UserId = request.UserId,
             Action = "moved",
-            OldValue = oldColumnId.ToString(),
-            NewValue = request.TargetColumnId.ToString(),
+            OldValue = oldColumnName,
+            NewValue = targetColumn.Name,
         });
 
         await db.SaveChangesAsync(cancellationToken);
