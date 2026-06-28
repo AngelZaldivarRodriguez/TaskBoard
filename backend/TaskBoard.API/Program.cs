@@ -1,6 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TaskBoard.API.Hubs;
+using TaskBoard.API.Middleware;
 using TaskBoard.Application;
 using TaskBoard.Infrastructure;
 
@@ -10,14 +12,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Capas de la aplicación
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// SignalR
 builder.Services.AddSignalR();
 
-// CORS — permite que React en localhost:5173 hable con la API
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactApp", policy =>
@@ -25,11 +24,10 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Necesario para SignalR con WebSockets
+              .AllowCredentials();
     });
 });
 
-// JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -45,7 +43,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
 
-        // SignalR necesita leer el token desde la query string (no del header)
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -61,6 +58,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Sobreescribir el NullBoardNotifier con la implementación real que usa SignalR
+builder.Services.AddScoped<TaskBoard.Application.Common.Interfaces.IBoardNotifier, TaskBoard.API.Services.BoardNotifier>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -69,12 +69,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors("ReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// Los hubs de SignalR se mapean aquí (se agregarán en PR 7)
-// app.MapHub<BoardHub>("/hubs/board");
+app.MapHub<BoardHub>("/hubs/board");
 
 app.Run();

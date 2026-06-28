@@ -1,22 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { PrivateRoute } from './components/auth/PrivateRoute'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { BoardPage } from './pages/BoardPage'
 
-// Por ahora solo una pantalla de bienvenida.
-// Cada PR irá agregando rutas nuevas aquí.
 function App() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <div className="flex items-center justify-center min-h-screen bg-gray-50">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">TaskBoard</h1>
-              <p className="text-gray-500">Setup completo. Siguiente: PR 2 — Autenticación</p>
-            </div>
-          </div>
-        }
-      />
-      {/* Redirigir cualquier ruta desconocida al inicio */}
+      {/* Rutas públicas */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Rutas protegidas — PrivateRoute redirige a /login si no hay sesión */}
+      <Route path="/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+      <Route path="/projects/:projectId" element={<PrivateRoute><BoardPage /></PrivateRoute>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
