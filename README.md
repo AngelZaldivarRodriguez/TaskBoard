@@ -1,38 +1,38 @@
 # TaskBoard
 
-A full-stack Kanban board application built to demonstrate production-grade architecture patterns across the entire stack — Clean Architecture and CQRS on the backend, React with real-time collaboration via SignalR on the frontend.
+Aplicación de tableros Kanban full-stack construida para demostrar patrones de arquitectura de nivel productivo en toda la pila — Clean Architecture y CQRS en el backend, React con colaboración en tiempo real via SignalR en el frontend.
 
-![Board view with dark mode](docs/screenshots/board-dark.png)
+![Vista del tablero en modo oscuro](docs/screenshots/board-dark.png)
 
-## Features
+## Funcionalidades
 
-- **Kanban boards** — drag & drop tasks between columns using dnd-kit
-- **Real-time collaboration** — move a task in one browser tab and watch it update instantly in another via SignalR WebSockets
-- **Multi-user projects** — invite members by email, assign tasks, set priorities and due dates
-- **Activity history** — every task change is logged with a timeline (who moved it where, when)
-- **Filters** — filter tasks by text search, priority, and assignee simultaneously
-- **Dark mode** — persisted per-user via localStorage
+- **Tableros Kanban** — arrastra y suelta tareas entre columnas usando dnd-kit
+- **Colaboración en tiempo real** — mueve una tarea en una pestaña del navegador y mírala actualizarse instantáneamente en otra via WebSockets con SignalR
+- **Proyectos multi-usuario** — invita miembros por email, asigna tareas, establece prioridades y fechas límite
+- **Historial de actividad** — cada cambio en una tarea queda registrado con una línea de tiempo (quién la movió, a dónde y cuándo)
+- **Filtros** — filtra tareas por búsqueda de texto, prioridad y responsable simultáneamente
+- **Modo oscuro** — guardado por usuario via localStorage
 
 ---
 
-## Architecture
+## Arquitectura
 
-This project is intentionally over-engineered for a personal tool — the goal is to showcase patterns used in enterprise .NET applications.
+Este proyecto está intencionalmente sobre-diseñado para una herramienta personal — el objetivo es mostrar los patrones usados en aplicaciones .NET empresariales.
 
 ### Backend — Clean Architecture
 
 ```
-TaskBoard.API/           ← Minimal API endpoints, SignalR Hub, middleware
-TaskBoard.Application/   ← CQRS handlers (MediatR), interfaces, DTOs
-TaskBoard.Domain/        ← Entities, enums — no dependencies
-TaskBoard.Infrastructure/ ← EF Core, JWT, bcrypt implementations
+TaskBoard.API/           ← Endpoints Minimal API, SignalR Hub, middleware
+TaskBoard.Application/   ← Handlers CQRS (MediatR), interfaces, DTOs
+TaskBoard.Domain/        ← Entidades, enums — sin dependencias externas
+TaskBoard.Infrastructure/ ← EF Core, JWT, implementaciones de bcrypt
 ```
 
-The dependency rule flows inward: Domain knows nothing, Application knows Domain, Infrastructure and API know Application. This means the business logic in Application is testable in isolation without a database or HTTP context.
+La regla de dependencias fluye hacia adentro: Domain no conoce nada, Application conoce Domain, Infrastructure y API conocen Application. Esto significa que la lógica de negocio en Application es testeable de forma aislada sin una base de datos ni contexto HTTP.
 
-#### Why CQRS with MediatR?
+#### Por qué CQRS con MediatR
 
-Each operation is a self-contained class:
+Cada operación es una clase autocontenida:
 
 ```
 Application/
@@ -46,11 +46,11 @@ Application/
       GetTasks/GetTasksQuery.cs         ← GET /tasks
 ```
 
-Each `Handler` receives its command, does exactly one thing, and returns. No shared mutable state between handlers. Adding a new operation means adding a new file, not modifying an existing one.
+Cada `Handler` recibe su comando, hace exactamente una cosa y retorna. Sin estado mutable compartido entre handlers. Agregar una nueva operación significa agregar un nuevo archivo, no modificar uno existente.
 
 #### Minimal API
 
-Endpoints are grouped using extension methods instead of controllers:
+Los endpoints se agrupan usando métodos de extensión en lugar de controladores:
 
 ```csharp
 // ProjectEndpoints.cs
@@ -69,14 +69,14 @@ public static IEndpointRouteBuilder MapProjects(this IEndpointRouteBuilder app)
 }
 ```
 
-`RequireAuthorization()` on the group applies JWT auth to all endpoints inside it — no `[Authorize]` attribute needed per endpoint.
+`RequireAuthorization()` en el grupo aplica autenticación JWT a todos los endpoints dentro de él — no se necesita el atributo `[Authorize]` por endpoint.
 
-#### SignalR — Real-time layer
+#### SignalR — capa en tiempo real
 
-The Application layer defines an interface so handlers don't depend on SignalR directly:
+La capa Application define una interfaz para que los handlers no dependan directamente de SignalR:
 
 ```csharp
-// Application layer — no SignalR reference
+// Capa Application — sin referencia a SignalR
 public interface IBoardNotifier
 {
     Task TaskMoved(Guid projectId, object payload);
@@ -85,7 +85,7 @@ public interface IBoardNotifier
     Task TaskDeleted(Guid projectId, Guid taskId);
 }
 
-// API layer — actual SignalR implementation
+// Capa API — implementación real con SignalR
 public class BoardNotifier(IHubContext<BoardHub> hubContext) : IBoardNotifier
 {
     public Task TaskMoved(Guid projectId, object payload) =>
@@ -93,7 +93,7 @@ public class BoardNotifier(IHubContext<BoardHub> hubContext) : IBoardNotifier
 }
 ```
 
-The Hub uses SignalR Groups — each project is a named group. Clients join when they open a board and leave when they navigate away. Only users in the same project group receive events.
+El Hub usa Grupos de SignalR — cada proyecto es un grupo con nombre. Los clientes se unen cuando abren un tablero y se van cuando navegan a otra página. Solo los usuarios en el mismo grupo del proyecto reciben los eventos.
 
 ```csharp
 [Authorize]
@@ -104,42 +104,42 @@ public class BoardHub : Hub
 }
 ```
 
-#### Data model
+#### Modelo de datos
 
 ```
 User ──< ProjectMember >── Project ──< BoardColumn ──< TaskItem ──< ActivityLog
 ```
 
-- A `User` can own many projects and be a member of others
-- A `Project` has an ordered list of `BoardColumn`s
-- A `TaskItem` has an `Order` field per column — reordering is done by updating all sibling orders in a single transaction
-- Every `MoveTask` command writes an `ActivityLog` row with the column names (not IDs), so the history is readable even if columns are renamed or deleted
+- Un `User` puede ser dueño de varios proyectos y miembro de otros
+- Un `Project` tiene una lista ordenada de `BoardColumn`
+- Un `TaskItem` tiene un campo `Order` por columna — el reordenamiento se hace actualizando todos los hermanos en una sola transacción
+- Cada comando `MoveTask` escribe una fila en `ActivityLog` con los nombres de columna (no IDs), para que el historial sea legible incluso si las columnas son renombradas o eliminadas
 
 ### Frontend — React 18
 
 ```
 src/
-  api/          ← Typed fetch wrappers (authApi, projectsApi, boardApi)
+  api/          ← Wrappers de fetch tipados (authApi, projectsApi, boardApi)
   components/
     board/      ← KanbanColumn, TaskCard, FilterBar
     tasks/      ← TaskDetailModal
-    ui/         ← Button, Input, Modal, ThemeToggle (primitives)
+    ui/         ← Button, Input, Modal, ThemeToggle (primitivos)
   hooks/        ← useSignalR
   pages/        ← LoginPage, RegisterPage, DashboardPage, BoardPage
-  store/        ← Zustand stores (auth, filters, theme)
-  types/        ← TypeScript interfaces matching backend DTOs
+  store/        ← Stores de Zustand (auth, filtros, tema)
+  types/        ← Interfaces TypeScript que corresponden a los DTOs del backend
 ```
 
-#### State management split
+#### División del estado
 
-Two different tools for two different jobs:
+Dos herramientas distintas para dos trabajos distintos:
 
-| What | Tool | Why |
-|------|------|-----|
-| Server state (tasks, projects) | TanStack Query | Caching, background refetch, loading/error states |
-| Client state (auth token, filters, theme) | Zustand | Lightweight, persisted to localStorage |
+| Qué | Herramienta | Por qué |
+|-----|-------------|---------|
+| Estado del servidor (tareas, proyectos) | TanStack Query | Caché, refetch en segundo plano, estados de carga/error |
+| Estado del cliente (token, filtros, tema) | Zustand | Liviano, persistido en localStorage |
 
-TanStack Query's `queryKey` pattern makes filter-aware fetching automatic — when a filter changes, the key changes, and the query re-runs:
+El patrón `queryKey` de TanStack Query hace que el fetching con filtros sea automático — cuando un filtro cambia, la key cambia y la query se vuelve a ejecutar:
 
 ```typescript
 useQuery({
@@ -148,7 +148,7 @@ useQuery({
 })
 ```
 
-#### Real-time with SignalR
+#### Tiempo real con SignalR
 
 ```typescript
 // hooks/useSignalR.ts
@@ -172,44 +172,44 @@ export function useSignalR(projectId: string) {
 }
 ```
 
-When an event arrives, it invalidates the React Query cache — the UI re-fetches automatically. No manual state merging required.
+Cuando llega un evento, invalida la caché de React Query — la UI vuelve a hacer fetch automáticamente. Sin sincronización manual de estado.
 
 #### Drag & Drop
 
-dnd-kit handles drag & drop. Each `TaskCard` is a `useSortable` element; each `KanbanColumn` is a `useDroppable` zone. On drop:
+dnd-kit maneja el arrastrar y soltar. Cada `TaskCard` es un elemento `useSortable`; cada `KanbanColumn` es una zona `useDroppable`. Al soltar:
 
-1. Optimistic update is skipped intentionally — SignalR delivers the server state to all clients including the one that dragged, making optimistic updates redundant
-2. `MoveTask` command runs on the server, reorders siblings in a transaction, fires `TaskMoved` via SignalR
-3. All connected clients receive the event and re-fetch
+1. El optimistic update se omite intencionalmente — SignalR entrega el estado del servidor a todos los clientes incluyendo el que arrastró, haciendo redundante el optimistic update
+2. El comando `MoveTask` se ejecuta en el servidor, reordena los hermanos en una transacción, dispara `TaskMoved` via SignalR
+3. Todos los clientes conectados reciben el evento y vuelven a hacer fetch
 
 ---
 
-## Tech Stack
+## Stack tecnológico
 
-| Layer | Technology |
-|-------|-----------|
-| Backend framework | ASP.NET Core 8 Minimal API |
+| Capa | Tecnología |
+|------|-----------|
+| Framework backend | ASP.NET Core 8 Minimal API |
 | ORM | Entity Framework Core 8 + SQL Server |
-| Mediator pattern | MediatR 12 |
-| Real-time | ASP.NET Core SignalR |
-| Authentication | JWT Bearer tokens |
-| Password hashing | BCrypt.Net |
-| Frontend framework | React 18 + TypeScript + Vite |
-| Server state | TanStack Query v5 |
-| Client state | Zustand v4 |
+| Patrón mediador | MediatR 12 |
+| Tiempo real | ASP.NET Core SignalR |
+| Autenticación | JWT Bearer tokens |
+| Hash de contraseñas | BCrypt.Net |
+| Framework frontend | React 18 + TypeScript + Vite |
+| Estado del servidor | TanStack Query v5 |
+| Estado del cliente | Zustand v4 |
 | Drag & drop | dnd-kit |
-| Styling | Tailwind CSS v4 |
-| Form validation | React Hook Form + Zod |
-| Real-time client | @microsoft/signalr |
+| Estilos | Tailwind CSS v4 |
+| Validación de formularios | React Hook Form + Zod |
+| Cliente tiempo real | @microsoft/signalr |
 
 ---
 
-## Getting Started
+## Cómo correr el proyecto
 
-### Prerequisites
+### Requisitos
 
 - .NET 8 SDK
-- SQL Server (or SQL Server Express / LocalDB)
+- SQL Server (o SQL Server Express / LocalDB)
 - Node.js 18+
 
 ### Backend
@@ -217,20 +217,20 @@ dnd-kit handles drag & drop. Each `TaskCard` is a `useSortable` element; each `K
 ```bash
 cd backend
 
-# Restore dependencies
+# Restaurar dependencias
 dotnet restore
 
-# Update appsettings.Development.json with your connection string and JWT key
-# (see appsettings.json for the expected keys)
+# Crear appsettings.Development.json con tu connection string y JWT key
+# (ver appsettings.json para las keys esperadas)
 
-# Run migrations
+# Ejecutar migraciones
 dotnet ef database update --project TaskBoard.Infrastructure --startup-project TaskBoard.API
 
-# Start the API (http://localhost:5000)
+# Iniciar la API (http://localhost:5000)
 dotnet run --project TaskBoard.API
 ```
 
-`appsettings.Development.json` minimum config:
+Configuración mínima en `appsettings.Development.json`:
 
 ```json
 {
@@ -238,7 +238,7 @@ dotnet run --project TaskBoard.API
     "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=TaskBoard;Trusted_Connection=True;"
   },
   "Jwt": {
-    "Key": "your-secret-key-minimum-32-characters",
+    "Key": "tu-clave-secreta-minimo-32-caracteres",
     "Issuer": "TaskBoard",
     "Audience": "TaskBoard"
   }
@@ -254,112 +254,112 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-The Vite dev server proxies `/api` and `/hubs` to `http://localhost:5000` — no CORS configuration needed in development.
+El servidor de desarrollo de Vite hace proxy de `/api` y `/hubs` hacia `http://localhost:5000` — no se necesita configuración de CORS en desarrollo.
 
 ---
 
-## Project Structure in Detail
+## Flujo de un request de punta a punta
 
-### Backend walkthrough — what happens when you move a task
+### Backend — qué pasa cuando mueves una tarea
 
-1. `PATCH /api/projects/{projectId}/tasks/{taskId}/move` arrives at `TaskEndpoints.cs`
-2. The endpoint calls `mediator.Send(new MoveTaskCommand(...))`
-3. `MoveTaskCommandHandler` runs:
-   - Loads the task with its current column (to get the column name for the activity log)
-   - Loads the target column
-   - Reorders siblings in both source and destination columns
-   - Writes an `ActivityLog` row: `{ action: "moved", oldValue: "Backlog", newValue: "In Progress" }`
-   - Calls `IBoardNotifier.TaskMoved(...)` — which goes to `BoardNotifier` → `IHubContext<BoardHub>` → all clients in the project's SignalR group
-4. All connected tabs receive `TaskMoved` and re-fetch their task list
+1. `PATCH /api/projects/{projectId}/tasks/{taskId}/move` llega a `TaskEndpoints.cs`
+2. El endpoint llama `mediator.Send(new MoveTaskCommand(...))`
+3. `MoveTaskCommandHandler` ejecuta:
+   - Carga la tarea con su columna actual (para obtener el nombre de columna para el log)
+   - Carga la columna destino
+   - Reordena los hermanos en columna origen y destino en una sola transacción
+   - Escribe una fila `ActivityLog`: `{ action: "moved", oldValue: "Backlog", newValue: "En Progreso" }`
+   - Llama `IBoardNotifier.TaskMoved(...)` → `BoardNotifier` → `IHubContext<BoardHub>` → todos los clientes en el grupo SignalR del proyecto
+4. Todas las pestañas conectadas reciben `TaskMoved` y vuelven a hacer fetch de sus tareas
 
-### Frontend walkthrough — what the user sees
+### Frontend — qué ve el usuario
 
-1. User drags a card — dnd-kit fires `onDragEnd`
-2. `BoardPage` calls `tasksApi.move(...)` which sends the PATCH request
-3. While waiting, the card stays in its original position (no optimistic update)
-4. Server responds → SignalR fires `TaskMoved` to all clients in the project
-5. `useSignalR` hook receives the event → calls `queryClient.invalidateQueries(['tasks', projectId])`
-6. TanStack Query re-fetches → UI updates with server-authoritative order
+1. El usuario arrastra una card — dnd-kit dispara `onDragEnd`
+2. `BoardPage` llama `tasksApi.move(...)` que envía el PATCH request
+3. Mientras espera, la card se queda en su posición original (sin optimistic update)
+4. El servidor responde → SignalR dispara `TaskMoved` a todos los clientes del proyecto
+5. El hook `useSignalR` recibe el evento → llama `queryClient.invalidateQueries(['tasks', projectId])`
+6. TanStack Query vuelve a hacer fetch → la UI se actualiza con el orden autoritativo del servidor
 
 ---
 
-## API Reference
+## Referencia de la API
 
 ### Auth
 
-| Method | Path | Body | Description |
+| Método | Ruta | Body | Descripción |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | `{ email, password, name }` | Create account |
-| POST | `/api/auth/login` | `{ email, password }` | Get JWT token |
+| POST | `/api/auth/register` | `{ email, password, name }` | Crear cuenta |
+| POST | `/api/auth/login` | `{ email, password }` | Obtener token JWT |
 
-### Projects
+### Proyectos
 
-| Method | Path | Auth | Description |
+| Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/api/projects` | ✓ | List projects where user is owner or member |
-| POST | `/api/projects` | ✓ | Create project |
-| GET | `/api/projects/{id}` | ✓ | Get project with columns and members |
-| PUT | `/api/projects/{id}` | ✓ Owner | Update project |
-| DELETE | `/api/projects/{id}` | ✓ Owner | Delete project |
-| POST | `/api/projects/{id}/members` | ✓ Owner | Add member by email |
-| DELETE | `/api/projects/{id}/members/{memberId}` | ✓ Owner | Remove member |
+| GET | `/api/projects` | ✓ | Listar proyectos donde el usuario es dueño o miembro |
+| POST | `/api/projects` | ✓ | Crear proyecto |
+| GET | `/api/projects/{id}` | ✓ | Obtener proyecto con columnas y miembros |
+| PUT | `/api/projects/{id}` | ✓ Dueño | Actualizar proyecto |
+| DELETE | `/api/projects/{id}` | ✓ Dueño | Eliminar proyecto |
+| POST | `/api/projects/{id}/members` | ✓ Dueño | Agregar miembro por email |
+| DELETE | `/api/projects/{id}/members/{memberId}` | ✓ Dueño | Eliminar miembro |
 
-### Columns
+### Columnas
 
-| Method | Path | Description |
+| Método | Ruta | Descripción |
 |--------|------|-------------|
-| POST | `/api/projects/{id}/columns` | Create column |
-| PUT | `/api/projects/{id}/columns/{colId}` | Rename column |
-| DELETE | `/api/projects/{id}/columns/{colId}` | Delete column |
-| PATCH | `/api/projects/{id}/columns/reorder` | Reorder columns |
+| POST | `/api/projects/{id}/columns` | Crear columna |
+| PUT | `/api/projects/{id}/columns/{colId}` | Renombrar columna |
+| DELETE | `/api/projects/{id}/columns/{colId}` | Eliminar columna |
+| PATCH | `/api/projects/{id}/columns/reorder` | Reordenar columnas |
 
-### Tasks
+### Tareas
 
-| Method | Path | Description |
+| Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/projects/{id}/tasks` | List tasks (supports `?search=&priority=&assigneeId=`) |
-| POST | `/api/projects/{id}/tasks` | Create task |
-| PUT | `/api/projects/{id}/tasks/{taskId}` | Update task |
-| DELETE | `/api/projects/{id}/tasks/{taskId}` | Delete task |
-| PATCH | `/api/projects/{id}/tasks/{taskId}/move` | Move task to column |
-| GET | `/api/projects/{id}/tasks/{taskId}/activity` | Get activity log |
+| GET | `/api/projects/{id}/tasks` | Listar tareas (soporta `?search=&priority=&assigneeId=`) |
+| POST | `/api/projects/{id}/tasks` | Crear tarea |
+| PUT | `/api/projects/{id}/tasks/{taskId}` | Actualizar tarea |
+| DELETE | `/api/projects/{id}/tasks/{taskId}` | Eliminar tarea |
+| PATCH | `/api/projects/{id}/tasks/{taskId}/move` | Mover tarea a otra columna |
+| GET | `/api/projects/{id}/tasks/{taskId}/activity` | Obtener historial de actividad |
 
 ### SignalR Hub
 
 **Endpoint:** `/hubs/board`  
-**Auth:** JWT via `?access_token=` query param (required by SignalR WebSocket protocol)
+**Auth:** JWT via query param `?access_token=` (requerido por el protocolo WebSocket de SignalR)
 
-| Client → Server | Payload | Effect |
-|-----------------|---------|--------|
-| `JoinProject` | `projectId: string` | Adds connection to project's broadcast group |
-| `LeaveProject` | `projectId: string` | Removes connection from group |
+| Cliente → Servidor | Payload | Efecto |
+|--------------------|---------|--------|
+| `JoinProject` | `projectId: string` | Agrega la conexión al grupo de broadcast del proyecto |
+| `LeaveProject` | `projectId: string` | Elimina la conexión del grupo |
 
-| Server → Client | Payload | Trigger |
-|-----------------|---------|---------|
-| `TaskMoved` | `{ taskId, fromColumnId, toColumnId, newOrder }` | MoveTask command |
-| `TaskCreated` | Task DTO | CreateTask command |
-| `TaskUpdated` | Task DTO | UpdateTask command |
-| `TaskDeleted` | `{ taskId }` | DeleteTask command |
+| Servidor → Cliente | Payload | Disparado por |
+|--------------------|---------|---------------|
+| `TaskMoved` | `{ taskId, fromColumnId, toColumnId, newOrder }` | Comando MoveTask |
+| `TaskCreated` | DTO de tarea | Comando CreateTask |
+| `TaskUpdated` | DTO de tarea | Comando UpdateTask |
+| `TaskDeleted` | `{ taskId }` | Comando DeleteTask |
 
 ---
 
-## Design Decisions
+## Decisiones de diseño
 
-**Why not use a repository pattern on top of EF Core?**  
-EF Core's `DbContext` is already a unit of work and `DbSet<T>` is already a repository. Adding another abstraction layer would be indirection without benefit. The Application layer depends on `IAppDbContext` (an interface over the DbContext) for testability.
+**¿Por qué no usar el patrón repositorio encima de EF Core?**  
+El `DbContext` de EF Core ya es una unidad de trabajo y `DbSet<T>` ya es un repositorio. Agregar otra capa de abstracción sería indirección sin beneficio. La capa Application depende de `IAppDbContext` (una interfaz sobre el DbContext) para poder hacer pruebas.
 
-**Why Minimal API instead of controllers?**  
-Microsoft recommends Minimal API for new .NET 8 projects. It removes the ceremony of `ControllerBase` inheritance and `[HttpGet]`/`[Route]` attributes. The endpoint groups (`MapGroup`) provide the same route prefix and auth scoping that controller classes provide.
+**¿Por qué Minimal API en lugar de controladores?**  
+Microsoft recomienda Minimal API para proyectos nuevos en .NET 8. Elimina la ceremonia de heredar `ControllerBase` y los atributos `[HttpGet]`/`[Route]`. Los grupos de endpoints (`MapGroup`) proveen el mismo prefijo de ruta y alcance de autenticación que proveen las clases de controladores.
 
-**Why is there no optimistic update on drag?**  
-Because SignalR delivers the confirmed server state to all clients within ~50ms on a local network. Adding optimistic updates would mean maintaining two sources of truth and handling rollback on failure. The UX cost is acceptable given the benefit of always showing server-authoritative state.
+**¿Por qué no hay optimistic update al arrastrar?**  
+Porque SignalR entrega el estado confirmado del servidor a todos los clientes en ~50ms en una red local. Agregar optimistic updates significaría mantener dos fuentes de verdad y manejar el rollback ante fallos. El costo en UX es aceptable dado el beneficio de mostrar siempre el estado autoritativo del servidor.
 
-**Why store column names instead of IDs in ActivityLog?**  
-If you store `columnId` in the log, and the column is later deleted or renamed, the history becomes unreadable. Storing `"moved from 'Backlog' to 'In Progress'"` means the log is self-contained and readable forever.
+**¿Por qué guardar nombres de columna en lugar de IDs en ActivityLog?**  
+Si guardas el `columnId` en el log, y la columna es eliminada o renombrada después, el historial se vuelve ilegible. Guardar `"movida de 'Backlog' a 'En Progreso'"` significa que el log es autocontenido y legible para siempre.
 
 ---
 
 ## Screenshots
 
-> Add screenshots to `docs/screenshots/` after running the app.
-> Suggested shots: login page, dashboard with projects, board in light mode, board in dark mode, task detail modal with activity log.
+> Agrega screenshots a `docs/screenshots/` después de correr la app.
+> Capturas sugeridas: página de login, dashboard con proyectos, tablero en modo claro, tablero en modo oscuro, modal de detalle de tarea con historial de actividad.
