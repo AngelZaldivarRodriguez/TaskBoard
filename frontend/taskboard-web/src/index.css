@@ -1,11 +1,37 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* En Tailwind v4 dark mode por clase se declara así */
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-light: #EDE9FE;
+}
 
 body {
   margin: 0;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  background: #FAFAFA;
+  color: #18181B;
+}
+
+.dark body {
+  background: #09090B;
+  color: #FAFAFA;
 }
 
 #root {
   min-height: 100vh;
 }
+
+/* Scrollbar sutil */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+
+.dark ::-webkit-scrollbar-thumb { background: #3F3F46; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #52525B; }
