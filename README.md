@@ -2,8 +2,6 @@
 
 Aplicación de tableros Kanban full-stack construida para demostrar patrones de arquitectura de nivel productivo en toda la pila — Clean Architecture y CQRS en el backend, React con colaboración en tiempo real via SignalR en el frontend.
 
-![Vista del tablero en modo oscuro](docs/screenshots/board-dark.png)
-
 ## Funcionalidades
 
 - **Tableros Kanban** — arrastra y suelta tareas entre columnas usando dnd-kit
@@ -357,9 +355,3 @@ Porque SignalR entrega el estado confirmado del servidor a todos los clientes en
 **¿Por qué guardar nombres de columna en lugar de IDs en ActivityLog?**  
 Si guardas el `columnId` en el log, y la columna es eliminada o renombrada después, el historial se vuelve ilegible. Guardar `"movida de 'Backlog' a 'En Progreso'"` significa que el log es autocontenido y legible para siempre.
 
----
-
-## Screenshots
-
-> Agrega screenshots a `docs/screenshots/` después de correr la app.
-> Capturas sugeridas: página de login, dashboard con proyectos, tablero en modo claro, tablero en modo oscuro, modal de detalle de tarea con historial de actividad.
