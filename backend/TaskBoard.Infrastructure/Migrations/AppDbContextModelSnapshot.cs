@@ -217,7 +217,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Task");
@@ -241,7 +241,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "Owner")
                         .WithMany("OwnedProjects")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -258,7 +258,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "User")
                         .WithMany("ProjectMemberships")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Project");

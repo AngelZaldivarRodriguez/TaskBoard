@@ -2,7 +2,9 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaskBoard.Application.Projects.Commands.AddMember;
 using TaskBoard.Application.Projects.Commands.CreateProject;
+using TaskBoard.Application.Projects.Commands.RemoveMember;
 using TaskBoard.Application.Projects.Commands.DeleteProject;
 using TaskBoard.Application.Projects.Commands.UpdateProject;
 using TaskBoard.Application.Projects.Queries.GetProject;
@@ -45,7 +47,22 @@ public class ProjectsController(IMediator mediator) : ControllerBase
         await mediator.Send(new DeleteProjectCommand(id, UserId), ct);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/members")]
+    public async Task<IActionResult> AddMember(Guid id, AddMemberRequest request, CancellationToken ct)
+    {
+        await mediator.Send(new AddMemberCommand(id, UserId, request.Email, request.Role), ct);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/members/{memberId:guid}")]
+    public async Task<IActionResult> RemoveMember(Guid id, Guid memberId, CancellationToken ct)
+    {
+        await mediator.Send(new RemoveMemberCommand(id, UserId, memberId), ct);
+        return NoContent();
+    }
 }
 
 public record CreateProjectRequest(string Name, string? Description);
 public record UpdateProjectRequest(string Name, string? Description);
+public record AddMemberRequest(string Email, Domain.Entities.UserRole Role);

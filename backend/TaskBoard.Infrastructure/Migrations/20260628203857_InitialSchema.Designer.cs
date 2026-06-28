@@ -12,8 +12,8 @@ using TaskBoard.Infrastructure.Persistence;
 namespace TaskBoard.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260628190558_AddAllEntities")]
-    partial class AddAllEntities
+    [Migration("20260628203857_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -220,7 +220,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Task");
@@ -244,7 +244,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "Owner")
                         .WithMany("OwnedProjects")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -261,7 +261,7 @@ namespace TaskBoard.Infrastructure.Migrations
                     b.HasOne("TaskBoard.Domain.Entities.User", "User")
                         .WithMany("ProjectMemberships")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Project");

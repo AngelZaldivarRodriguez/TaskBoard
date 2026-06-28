@@ -19,10 +19,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasKey(pm => new { pm.ProjectId, pm.UserId });
 
         modelBuilder.Entity<ProjectMember>()
-            .HasOne(pm => pm.Project).WithMany(p => p.Members).HasForeignKey(pm => pm.ProjectId);
+            .HasOne(pm => pm.Project).WithMany(p => p.Members).HasForeignKey(pm => pm.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<ProjectMember>()
-            .HasOne(pm => pm.User).WithMany(u => u.ProjectMemberships).HasForeignKey(pm => pm.UserId);
+            .HasOne(pm => pm.User).WithMany(u => u.ProjectMemberships).HasForeignKey(pm => pm.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email).IsUnique();
@@ -34,6 +36,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<TaskItem>()
             .HasOne(t => t.CreatedBy).WithMany().HasForeignKey(t => t.CreatedById)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Proyecto -> Owner: si se borra el owner no se borran los proyectos automáticamente
+        modelBuilder.Entity<Project>()
+            .HasOne(p => p.Owner).WithMany(u => u.OwnedProjects).HasForeignKey(p => p.OwnerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ActivityLog -> User: Restrict para evitar cascadas múltiples
+        modelBuilder.Entity<ActivityLog>()
+            .HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ActivityLog -> Task: si se borra la tarea, se borran sus logs
+        modelBuilder.Entity<ActivityLog>()
+            .HasOne(a => a.Task).WithMany(t => t.ActivityLogs).HasForeignKey(a => a.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<User>().Property(u => u.Role).HasConversion<string>();
         modelBuilder.Entity<ProjectMember>().Property(pm => pm.Role).HasConversion<string>();
